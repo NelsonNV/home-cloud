@@ -1,117 +1,63 @@
+import os
 from django.db import models
 from django.contrib.auth.models import User
-import os
-import hashlib
+from django.conf import settings
+from django.utils import timezone
 
 
-class File(models.Model):
-    # Opciones de visibilidad
+class Archivo(models.Model):
+    objects = models.Manager()
     PUBLIC = "public"
     PRIVATE = "private"
     SHARED = "shared"
 
     VISIBILITY_CHOICES = [(PUBLIC, "Public"), (PRIVATE, "Private"), (SHARED, "Shared")]
 
-    # Campos del modelo
-    name = models.CharField(max_length=255)
-    path = models.CharField(max_length=255)
-    extension = models.CharField(max_length=10)
-    size = models.IntegerField()
-    date = models.DateTimeField()
-    directory = models.CharField(max_length=255)
-    hash = models.CharField(max_length=64, blank=True, null=True)  # Hash SHA-256
-    owner = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="files_owned"
-    )
+    archivo = models.FileField(upload_to="files/")
+    nombre = models.CharField(max_length=255, blank=True, null=True)
+    extension = models.CharField(max_length=10, blank=True, null=True)
+    size = models.IntegerField(blank=True, null=True)
+    fecha_creacion = models.DateTimeField(default=timezone.now)
+    directorio = models.CharField(max_length=255, blank=True, null=True)
     visibility = models.CharField(
         max_length=10, choices=VISIBILITY_CHOICES, default=PUBLIC
     )
 
-    def __str__(self):
-        return f"{self.name}"
+    def __str__(self) -> str:
+        return f"{self.nombre}.{self.extension} <{self.directorio}>"
 
-    def calculate_hash(self):
-        """
-        Calcula el hash SHA-256 del archivo.
-        """
-        sha256 = hashlib.sha256()
-        with open(self.path, "rb") as file:
-            while True:
-                data = file.read(65536)  # Lee en bloques de 64 KB
-                if not data:
-                    break
-                sha256.update(data)
-        return sha256.hexdigest()
+    def full_name(self):
+        return f"{self.nombre}.{self.extension}"
 
-    @classmethod
-    def create_from_path(cls, file_path, user, visibility=PUBLIC):
-        """
-        Crea una instancia de File a partir de una ruta de archivo.
-        """
-        file_stats = os.stat(file_path)
-        name = os.path.basename(file_path)
-        directory = os.path.dirname(file_path)
-        extension = os.path.splitext(file_path)[1]
-        size = file_stats.st_size
-        date = file_stats.st_mtime  # Usa la última modificación como fecha
+    def get_size_formatted(self):
+        bite = 1024
+        size = self.size
 
-        # Crear la instancia sin guardar aún
-        file_instance = cls(
-            name=name,
-            path=file_path,
-            extension=extension,
-            size=size,
-            date=date,
-            directory=directory,
-            owner=user,
-            visibility=visibility,
-        )
+        if size < bite:
+            return f"{size} bytes"
+        elif size < bite * bite:
+            return f"{size / bite:.2f} KB"
+        elif size < bite * bite * bite:
+            return f"{size / bite / bite:.2f} MB"
+        elif size < bite * bite * bite * bite:
+            return f"{size / bite / bite / bite:.2f} GB"
 
-        # Calcular y asignar el hash
-        file_instance.hash = file_instance.calculate_hash()
+    def save(self, *args, **kwargs):
+        if self.size is None:
+            self.size = self.archivo.size
+        if self.extension is None:
+            self.extension = self.archivo.name.split(".")[-1]
+        if self.nombre is None:
+            self.nombre = self.archivo.name.split(".")[0]
+        if self.visibility is None:
+            self.visibility = self.PUBLIC
+        if self.directorio:
+            self.archivo.name = os.path.join(self.directorio, self.full_name())
 
-        return file_instance
+        # Asegúrate de que el directorio existe
+        full_directory = os.path.join(settings.MEDIA_ROOT, self.directorio or "")
+        os.makedirs(full_directory, exist_ok=True)
 
-    @classmethod
-    def count_files_for_user(cls, user):
-        """
-        Cuenta cuántos archivos están relacionados con un usuario.
-        """
-        return cls.objects.filter(owner=user).count()
+        super().save(*args, **kwargs)
 
 
-class FileAccess(models.Model):
-    # Relación con el modelo File
-    file = models.ForeignKey(File, on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    permission_level = models.CharField(
-        max_length=10, choices=[("read", "Read"), ("write", "Write")], default="read"
-    )
-
-    def __str__(self):
-        return f"Acceso de {self.user.username} a {self.file.name} ({self.permission_level})"
-
-
-def user_can_access(file, user):
-    """
-    Verifica si un usuario tiene acceso a un archivo, dependiendo de su visibilidad o permisos.
-    """
-    # Si el archivo es público, cualquier usuario puede acceder
-    if file.visibility == File.PUBLIC:
-        return True
-
-    # Si el archivo es privado, solo el propietario y los usuarios con acceso pueden verlo
-    if file.visibility == File.PRIVATE:
-        return (
-            file.owner == user
-            or FileAccess.objects.filter(file=file, user=user).exists()
-        )
-
-    # Si el archivo es compartido, verifica si el usuario tiene permiso
-    if file.visibility == File.SHARED:
-        return (
-            file.owner == user
-            or FileAccess.objects.filter(file=file, user=user).exists()
-        )
-
-    return False

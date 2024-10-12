@@ -1,16 +1,7 @@
 from django.contrib import admin
-from files.models import File
+from files.models import Archivo
 
 
-@admin.register(File)
+@admin.register(Archivo)
 class FileAdmin(admin.ModelAdmin):
-    list_display = (
-        "name",
-        "path",
-        "extension",
-        "size",
-        "date",
-        "directory",
-        "hash",
-        "visibility",
-    )
+    pass
