@@ -1,0 +1,56 @@
+{% load static %}
+{% load file_extras %}
+
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title></title>
+    <link href="css/style.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  </head>
+  <body>
+    <main>
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    <section>
+    <h1>File Manager</h1>
+      <form action="" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Submit</button>
+      </form>
+    </section>
+
+
+<section>
+  <h2>Files</h2>
+  <ul class="file-tree">
+    {% for directory, files in files_by_directory.items %}
+      <li>
+        <span class="folder">📁 {{ directory }}</span>
+        <ul class="files">
+          {% for file in files %}
+            <li>
+              <i class="fas {{ file.extension|get_file_icon }}"></i>
+              <a href="media/{{ file.archivo }}">{{ file.nombre }}.{{ file.extension }}</a>
+            </li>
+          {% endfor %}
+        </ul>
+      </li>
+    {% endfor %}
+  </ul>
+</section>
+
+
+
+    </main>
+
+  </body>
+</html>

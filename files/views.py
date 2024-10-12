@@ -20,15 +20,15 @@ class FileManagerView(View):
         form = ArchivoForm()
         return render(request, "file_manager.html", {"form": form, "files_by_directory": files_by_directory})
     def post(self, request):
-        form = ArchivoForm(request.POST,request.FILES)
+        form = ArchivoForm(request.POST, request.FILES)
         files = Archivo.objects.all()
         if form.is_valid():
             form.save()
             messages.success(request, "Archivo creado correctamente")
-            return render(request, "file_manager.html",{"form":ArchivoForm(),"files":files})
+            return render(request, "file_manager.html", {"form": ArchivoForm(), "files_by_directory": files_by_directory})
         else:
             messages.error(request, f"Error al crear el archivo {form.errors}")
-            return render(request, "file_manager.html", {"form": form, "files": files})
+            return render(request, "file_manager.html", {"form": form, "files_by_directory": files_by_directory})
 
 
 def home(request):
