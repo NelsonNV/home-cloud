@@ -9,6 +9,21 @@
     <title></title>
     <link href="css/style.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        .file-tree {
+            list-style: none;
+            margin: 2px;
+            padding-left: 20px;
+        }
+        .folder {
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .files {
+            display: none;
+            padding-left: 20px;
+        }
+    </style>
   </head>
   <body>
     <main>
@@ -28,29 +43,39 @@
       </form>
     </section>
 
-
-<section>
-  <h2>Files</h2>
-  <ul class="file-tree">
-    {% for directory, files in files_by_directory.items %}
-      <li>
-        <span class="folder">📁 {{ directory }}</span>
-        <ul class="files">
-          {% for file in files %}
-            <li>
-              <i class="fas {{ file.extension|get_file_icon }}"></i>
-              <a href="media/{{ file.archivo }}">{{ file.nombre }}.{{ file.extension }}</a>
-            </li>
-          {% endfor %}
-        </ul>
-      </li>
-    {% endfor %}
-  </ul>
-</section>
-
-
-
+    <section>
+        <h2>Files</h2>
+        {% render_tree files_tree %}
+    </section>
     </main>
+
+<script>
+    function toggleFiles(element) {
+        const filesList = element.nextElementSibling; // Obtener la lista de archivos
+        if (filesList.style.display === "none" || filesList.style.display === "") {
+            filesList.style.display = "block"; // Mostrar archivos
+        } else {
+            filesList.style.display = "none"; // Ocultar archivos
+        }
+    }
+
+    function viewFile(fileUrl) {
+        alert("Ver archivo: " + fileUrl);
+    }
+
+    function downloadFile(fileUrl) {
+        alert("Descargar archivo: " + fileUrl);
+        // window.location.href = fileUrl; // Descomentar para descargar
+    }
+
+    function moveFile(fileName) {
+        alert("Mover archivo: " + fileName);
+    }
+
+    function deleteFile(fileName) {
+        alert("Eliminar archivo: " + fileName);
+    }
+</script>
 
   </body>
 </html>
